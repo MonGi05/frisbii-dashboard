@@ -1,0 +1,21 @@
+<div
+  class="flex items-start gap-3 bg-red-50 border border-red-200 rounded-xl px-5 py-4 my-5"
+  data-testid="error-display"
+>
+  <svg
+    class="shrink-0 mt-0.5"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="#dc2626"
+    stroke-width="2"
+  >
+    <circle cx="12" cy="12" r="10" />
+    <path d="M12 8v4M12 16h.01" />
+  </svg>
+  <div>
+    <p class="font-semibold text-red-900 text-sm m-0 mb-0.5">Something went wrong</p>
+    <p class="text-red-700 text-[13px] m-0">{{ message() }}</p>
+  </div>
+</div>

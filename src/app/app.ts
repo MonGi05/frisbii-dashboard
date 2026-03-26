@@ -1,0 +1,11 @@
+import { Component } from '@angular/core';
+import { RouterOutlet } from '@angular/router';
+import { SidebarComponent } from './shared/components/sidebar.component';
+import { ToastContainerComponent } from './shared/components/toast-container.component';
+
+@Component({
+  selector: 'app-root',
+  imports: [RouterOutlet, SidebarComponent, ToastContainerComponent],
+  templateUrl: './app.html',
+})
+export class AppComponent {}
