@@ -9,7 +9,7 @@ import {
   ElementRef,
   viewChild,
 } from '@angular/core';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Subject } from 'rxjs';
@@ -28,6 +28,7 @@ import { DatePipe } from '@angular/common';
 })
 export class CustomerListComponent implements OnInit {
   private readonly customerService = inject(CustomerService);
+  private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -90,9 +91,13 @@ export class CustomerListComponent implements OnInit {
           this.hasMore.set(!!res.next_page_token);
         }
         this.loading.set(false);
+        this.updateQueryParam();
       });
 
-    this.loadCustomers();
+    // Restore search from URL query param (e.g. /customers?search=cust-001)
+    const initialSearch = this.route.snapshot.queryParamMap.get('search') ?? '';
+    this.searchTerm.set(initialSearch);
+    this.loadCustomers(initialSearch);
     this.setupIntersectionObserver();
   }
 
@@ -108,6 +113,7 @@ export class CustomerListComponent implements OnInit {
     this.nextPageToken.set(undefined);
     this.hasMore.set(false);
     this.loadCustomers();
+    this.updateQueryParam();
   }
 
   goToCustomer(handle: string): void {
@@ -119,10 +125,10 @@ export class CustomerListComponent implements OnInit {
     return name || '—';
   }
 
-  private loadCustomers(): void {
+  private loadCustomers(search?: string): void {
     this.loading.set(true);
     this.customerService
-      .getCustomers(10)
+      .getCustomers(10, undefined, search || undefined)
       .pipe(
         catchError((err) => {
           this.error.set(this.extractError(err));
@@ -179,6 +185,17 @@ export class CustomerListComponent implements OnInit {
 
     this.destroyRef.onDestroy(() => {
       this.observer?.disconnect();
+    });
+  }
+
+  // Sync the URL query string to match the current search state.
+  // Uses replaceUrl to avoid polluting browser history with every keystroke.
+  private updateQueryParam(): void {
+    const search = this.searchTerm();
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: search ? { search } : {},
+      replaceUrl: true,
     });
   }
 
