@@ -2,11 +2,11 @@ import {
   Component,
   inject,
   signal,
+  effect,
   OnInit,
   DestroyRef,
   ElementRef,
   viewChild,
-  AfterViewInit,
 } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -37,7 +37,7 @@ import { DatePipe } from '@angular/common';
   ],
   templateUrl: './customer-detail.component.html',
 })
-export class CustomerDetailComponent implements OnInit, AfterViewInit {
+export class CustomerDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly customerService = inject(CustomerService);
   private readonly subscriptionService = inject(SubscriptionService);
@@ -73,7 +73,31 @@ export class CustomerDetailComponent implements OnInit, AfterViewInit {
   private subsObserver: IntersectionObserver | null = null;
   private invObserver: IntersectionObserver | null = null;
 
+  constructor() {
+    // Sentinels live inside @if blocks that depend on async data, so they
+    // may be created/destroyed as data loads. These effects re-attach the
+    // IntersectionObserver whenever Angular inserts the sentinel into the DOM.
+    effect(() => {
+      const el = this.subsSentinel()?.nativeElement;
+      if (el && this.subsObserver) {
+        this.subsObserver.disconnect();
+        this.subsObserver.observe(el);
+      }
+    });
+
+    effect(() => {
+      const el = this.invSentinel()?.nativeElement;
+      if (el && this.invObserver) {
+        this.invObserver.disconnect();
+        this.invObserver.observe(el);
+      }
+    });
+  }
+
   ngOnInit(): void {
+    this.setupSubsObserver();
+    this.setupInvObserver();
+
     // switchMap cancels the previous customer fetch if the route :handle changes
     // before it completes (e.g. quick back-forward navigation).
     this.route.paramMap
@@ -102,16 +126,13 @@ export class CustomerDetailComponent implements OnInit, AfterViewInit {
       });
   }
 
-  ngAfterViewInit(): void {
-    this.setupSubsObserver();
-    this.setupInvObserver();
-  }
-
+  // Fall back to handle when the customer has no name fields.
   customerName(c: Customer): string {
     const name = [c.first_name, c.last_name].filter(Boolean).join(' ');
     return name || c.handle;
   }
 
+  // Fall back to handle prefix when first/last name are missing.
   avatarInitials(c: Customer): string {
     if (c.first_name && c.last_name) {
       return (c.first_name[0] + c.last_name[0]).toUpperCase();
@@ -207,6 +228,7 @@ export class CustomerDetailComponent implements OnInit, AfterViewInit {
       });
   }
 
+  // Guard: skip if already fetching, no more pages, or customer not yet loaded.
   private loadMoreSubscriptions(): void {
     if (this.subscriptionsLoadingMore() || !this.subscriptionsHasMore() || !this.customer()) return;
     this.subscriptionsLoadingMore.set(true);
@@ -251,6 +273,7 @@ export class CustomerDetailComponent implements OnInit, AfterViewInit {
       });
   }
 
+  // Guard: skip if already fetching, no more pages, or customer not yet loaded.
   private loadMoreInvoices(): void {
     if (this.invoicesLoadingMore() || !this.invoicesHasMore() || !this.customer()) return;
     this.invoicesLoadingMore.set(true);
@@ -273,9 +296,6 @@ export class CustomerDetailComponent implements OnInit, AfterViewInit {
       });
   }
 
-  // The sentinel element may not exist yet at ngAfterViewInit (it's inside @if blocks
-  // that depend on async data). The rAF loop keeps checking until the element appears,
-  // then attaches the observer.
   private setupSubsObserver(): void {
     this.subsObserver = new IntersectionObserver(
       (entries) => {
@@ -283,15 +303,6 @@ export class CustomerDetailComponent implements OnInit, AfterViewInit {
       },
       { threshold: 0.1 },
     );
-    const check = (): void => {
-      const el = this.subsSentinel()?.nativeElement;
-      if (el && this.subsObserver) {
-        this.subsObserver.observe(el);
-      } else {
-        requestAnimationFrame(check);
-      }
-    };
-    check();
     this.destroyRef.onDestroy(() => this.subsObserver?.disconnect());
   }
 
@@ -302,15 +313,6 @@ export class CustomerDetailComponent implements OnInit, AfterViewInit {
       },
       { threshold: 0.1 },
     );
-    const check = (): void => {
-      const el = this.invSentinel()?.nativeElement;
-      if (el && this.invObserver) {
-        this.invObserver.observe(el);
-      } else {
-        requestAnimationFrame(check);
-      }
-    };
-    check();
     this.destroyRef.onDestroy(() => this.invObserver?.disconnect());
   }
 
