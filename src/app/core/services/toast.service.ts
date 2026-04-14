@@ -6,6 +6,7 @@ export interface Toast {
   type: 'success' | 'error' | 'info';
 }
 
+/** Signal-driven toast notifications. Toasts auto-dismiss after 4 seconds. */
 @Injectable({ providedIn: 'root' })
 export class ToastService {
   private nextId = 0;

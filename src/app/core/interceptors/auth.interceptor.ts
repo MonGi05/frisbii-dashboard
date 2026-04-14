@@ -6,6 +6,7 @@ import { environment } from '../../../environments/environment';
 const MAX_RETRIES = 3;
 const INITIAL_DELAY_MS = 1000;
 
+// Only Frisbii API requests receive the auth header; third-party URLs pass through untouched.
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   if (req.url.startsWith(environment.apiBaseUrl)) {
     const authReq = req.clone({

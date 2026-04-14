@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { Invoice, InvoiceListResponse } from '../models/invoice.model';
 
+/** Reads individual invoices and paginated invoice lists from the Frisbii API. */
 @Injectable({ providedIn: 'root' })
 export class InvoiceService {
   private readonly http = inject(HttpClient);

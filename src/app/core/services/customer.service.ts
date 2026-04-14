@@ -5,6 +5,7 @@ import { map, catchError } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { Customer, CustomerListResponse } from '../models/customer.model';
 
+/** Fetches individual customers and paginated customer lists from the Frisbii API. */
 @Injectable({ providedIn: 'root' })
 export class CustomerService {
   private readonly http = inject(HttpClient);

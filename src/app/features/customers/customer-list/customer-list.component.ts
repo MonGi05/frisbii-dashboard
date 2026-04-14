@@ -47,9 +47,9 @@ export class CustomerListComponent implements OnInit {
   private observer: IntersectionObserver | null = null;
 
   constructor() {
-    // The sentinel <div> is inside an @if(hasMore()) block, so it gets created/destroyed
-    // as pages load. This effect re-attaches the IntersectionObserver whenever the
-    // sentinel element reappears in the DOM.
+    // The sentinel <div> lives inside an @if(hasMore()) block, so Angular
+    // destroys and recreates it between pages. This effect re-attaches the
+    // IntersectionObserver whenever the sentinel reappears in the DOM.
     effect(() => {
       const el = this.scrollSentinel()?.nativeElement;
       if (el && this.observer) {
@@ -60,8 +60,8 @@ export class CustomerListComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    // Search pipeline: debounce keystrokes → skip unchanged values → cancel previous
-    // in-flight request via switchMap (prevents stale results from overwriting fresh ones).
+    // Debounce keystrokes, skip duplicates, and cancel any in-flight request
+    // before issuing the next one (switchMap) so stale results never land.
     this.searchSubject
       .pipe(
         debounceTime(350),
@@ -101,6 +101,7 @@ export class CustomerListComponent implements OnInit {
     this.searchSubject.next(value);
   }
 
+  // Bypass the debounce pipeline — reset state and fetch immediately.
   clearSearch(): void {
     this.searchTerm.set('');
     this.customers.set([]);
@@ -140,6 +141,7 @@ export class CustomerListComponent implements OnInit {
       });
   }
 
+  // Guard: skip if already fetching or no more pages.
   private loadMore(): void {
     if (this.loadingMore() || !this.hasMore()) return;
     this.loadingMore.set(true);
@@ -163,7 +165,8 @@ export class CustomerListComponent implements OnInit {
       });
   }
 
-  // When ≥10% of the sentinel enters the viewport, fetch the next page.
+  // Creates the observer only; the constructor effect() handles attaching it
+  // to the sentinel element once Angular renders it.
   private setupIntersectionObserver(): void {
     this.observer = new IntersectionObserver(
       (entries) => {

@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { Subscription, SubscriptionListResponse } from '../models/subscription.model';
 
+/** Reads subscriptions and performs lifecycle actions (pause/reactivate) via the Frisbii API. */
 @Injectable({ providedIn: 'root' })
 export class SubscriptionService {
   private readonly http = inject(HttpClient);
