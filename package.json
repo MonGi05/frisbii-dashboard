@@ -6,10 +6,12 @@
     "start": "ng serve --port 4200 --host 0.0.0.0",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test --no-watch --browsers=ChromeHeadlessNoSandbox"
+    "test": "ng test --no-watch --browsers=ChromeHeadlessNoSandbox",
+    "e2e": "playwright test",
+    "e2e:mocked": "playwright test --project=chromium-mocked"
   },
   "private": true,
-  "packageManager": "yarn@1.22.22",
+  "packageManager": "npm@11.9.0",
   "dependencies": {
     "@angular/common": "^21.2.0",
     "@angular/compiler": "^21.2.0",
@@ -27,6 +29,7 @@
     "@angular/build": "^21.2.3",
     "@angular/cli": "^21.2.3",
     "@angular/compiler-cli": "^21.2.0",
+    "@playwright/test": "^1.59.1",
     "@tailwindcss/postcss": "^4.2.2",
     "@types/jasmine": "^6.0.0",
     "autoprefixer": "^10.4.27",
