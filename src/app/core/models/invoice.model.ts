@@ -6,7 +6,7 @@ export interface Invoice {
   customer: string;
   subscription: string;
   plan: string;
-  state: string;
+  state: InvoiceState;
   processing: boolean;
   type: string;
   amount: number;

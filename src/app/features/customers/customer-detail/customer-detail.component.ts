@@ -17,7 +17,7 @@ import { SubscriptionService } from '../../../core/services/subscription.service
 import { InvoiceService } from '../../../core/services/invoice.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { Customer } from '../../../core/models/customer.model';
-import { Subscription } from '../../../core/models/subscription.model';
+import { Subscription, SubscriptionState } from '../../../core/models/subscription.model';
 import { Invoice } from '../../../core/models/invoice.model';
 import { LoadingSpinnerComponent } from '../../../shared/components/loading-spinner.component';
 import { ErrorDisplayComponent } from '../../../shared/components/error-display.component';
@@ -196,7 +196,7 @@ export class CustomerDetailComponent implements OnInit {
       });
   }
 
-  private updateSubscriptionState(handle: string, state: string): void {
+  private updateSubscriptionState(handle: string, state: SubscriptionState): void {
     this.subscriptions.update((subs) =>
       subs.map((s) => (s.handle === handle ? { ...s, state } : s)),
     );

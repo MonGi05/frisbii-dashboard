@@ -4,7 +4,7 @@ export interface Subscription {
   handle: string;
   customer: string;
   plan: string;
-  state: string;
+  state: SubscriptionState;
   test: boolean;
   amount: number;
   quantity: number;

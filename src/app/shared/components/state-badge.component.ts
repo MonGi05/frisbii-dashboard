@@ -1,4 +1,6 @@
 import { Component, input, computed } from '@angular/core';
+import { SubscriptionState } from '../../core/models/subscription.model';
+import { InvoiceState } from '../../core/models/invoice.model';
 
 @Component({
   selector: 'app-state-badge',
@@ -9,7 +11,7 @@ export class StateBadgeComponent {
   type = input<'subscription' | 'invoice'>('subscription');
 
   badgeClasses = computed(() => {
-    const s = this.normalizedState();
+    const s: SubscriptionState | InvoiceState | 'unknown' = this.normalizedState();
     const map: Record<string, string> = {
       active: 'bg-green-100 text-green-800',
       settled: 'bg-green-100 text-green-800',
@@ -27,11 +29,11 @@ export class StateBadgeComponent {
 
   // Validates the state against known values for the given type.
   // Returns 'unknown' for unrecognised API states so the badge always renders gracefully.
-  normalizedState(): string {
+  normalizedState(): SubscriptionState | InvoiceState | 'unknown' {
     const s = this.state().toLowerCase();
-    const subscriptionStates = ['active', 'cancelled', 'expired', 'on_hold'];
-    const invoiceStates = ['created', 'pending', 'settled', 'authorized', 'failed'];
+    const subscriptionStates: SubscriptionState[] = ['active', 'cancelled', 'expired', 'on_hold'];
+    const invoiceStates: InvoiceState[] = ['created', 'pending', 'settled', 'authorized', 'failed'];
     const knownStates = this.type() === 'invoice' ? invoiceStates : subscriptionStates;
-    return knownStates.includes(s) ? s : 'unknown';
+    return (knownStates as string[]).includes(s) ? (s as SubscriptionState | InvoiceState) : 'unknown';
   }
 }
