@@ -120,7 +120,7 @@ totalLoaded = computed(() => this.customers().length);
 
 ### 2. RxJS Search Pipeline (Debounce → SwitchMap)
 
-The customer search input uses a classic reactive pattern to avoid flooding the API:
+The customer search input uses the URL query param as the single source of truth. Keystrokes are debounced, then pushed into the URL; a separate `queryParamMap` subscription handles the actual data fetch:
 
 ```
 User types → Subject.next()
@@ -132,16 +132,19 @@ User types → Subject.next()
          distinctUntilChanged()  ← Skip if value hasn't changed
               │
               ▼
-         tap(reset state)        ← Clear list, show spinner
+         router.navigate()       ← Update URL query param only
               │
               ▼
-         switchMap(API call)     ← Cancel previous in-flight request
+         queryParamMap emits     ← Single source of truth (also fires on navbar click)
+              │
+              ▼
+         switchMap(API call)     ← Cancel previous in-flight request, fetch fresh
               │
               ▼
          subscribe(update UI)
 ```
 
-`switchMap` is critical here: if the user types "abc" then quickly changes to "abcd", the request for "abc" is **cancelled** so stale results never overwrite fresh ones.
+`switchMap` is critical here: if the user types "abc" then quickly changes to "abcd", the request for "abc" is **cancelled** so stale results never overwrite fresh ones. Because the URL is the single source of truth, clicking the sidebar nav link (which navigates to `/customers` without a `?search` param) also triggers the `queryParamMap` subscription, correctly resetting the list.
 
 ### 3. Optimistic UI for Subscription Actions
 

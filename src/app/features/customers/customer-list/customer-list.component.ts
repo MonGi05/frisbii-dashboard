@@ -13,7 +13,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Subject } from 'rxjs';
-import { debounceTime, distinctUntilChanged, switchMap, catchError, tap } from 'rxjs/operators';
+import { debounceTime, distinctUntilChanged, switchMap, catchError } from 'rxjs/operators';
 import { of } from 'rxjs';
 import { CustomerService } from '../../../core/services/customer.service';
 import { Customer } from '../../../core/models/customer.model';
@@ -61,27 +61,26 @@ export class CustomerListComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    // Debounce keystrokes, skip duplicates, and cancel any in-flight request
-    // before issuing the next one (switchMap) so stale results never land.
-    this.searchSubject
+    // The URL query param is the single source of truth for search state.
+    // All data loading flows through this one subscription — no duplicate fetches.
+    this.route.queryParamMap
       .pipe(
-        debounceTime(350),
-        distinctUntilChanged(),
-        tap(() => {
+        switchMap((params) => {
+          const search = params.get('search') ?? '';
+          this.searchTerm.set(search);
           this.customers.set([]);
           this.nextPageToken.set(undefined);
+          this.hasMore.set(false);
           this.loading.set(true);
           this.error.set(null);
-        }),
-        switchMap((term) =>
-          this.customerService.getCustomers(10, undefined, term || undefined).pipe(
+          return this.customerService.getCustomers(10, undefined, search || undefined).pipe(
             catchError((err) => {
               this.error.set(this.extractError(err));
               this.loading.set(false);
               return of(null);
             }),
-          ),
-        ),
+          );
+        }),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe((res) => {
@@ -91,13 +90,16 @@ export class CustomerListComponent implements OnInit {
           this.hasMore.set(!!res.next_page_token);
         }
         this.loading.set(false);
-        this.updateQueryParam();
       });
 
-    // Restore search from URL query param (e.g. /customers?search=cust-001)
-    const initialSearch = this.route.snapshot.queryParamMap.get('search') ?? '';
-    this.searchTerm.set(initialSearch);
-    this.loadCustomers(initialSearch);
+    // Debounce keystrokes, then push the value into the URL.
+    // The queryParamMap subscription above handles the actual data fetch.
+    this.searchSubject
+      .pipe(debounceTime(350), distinctUntilChanged(), takeUntilDestroyed(this.destroyRef))
+      .subscribe((term) => {
+        this.updateQueryParam(term);
+      });
+
     this.setupIntersectionObserver();
   }
 
@@ -106,14 +108,11 @@ export class CustomerListComponent implements OnInit {
     this.searchSubject.next(value);
   }
 
-  // Bypass the debounce pipeline — reset state and fetch immediately.
+  // Bypass the debounce pipeline — update the URL immediately.
+  // The queryParamMap subscription handles the rest.
   clearSearch(): void {
     this.searchTerm.set('');
-    this.customers.set([]);
-    this.nextPageToken.set(undefined);
-    this.hasMore.set(false);
-    this.loadCustomers();
-    this.updateQueryParam();
+    this.updateQueryParam('');
   }
 
   goToCustomer(handle: string): void {
@@ -123,28 +122,6 @@ export class CustomerListComponent implements OnInit {
   customerName(c: Customer): string {
     const name = [c.first_name, c.last_name].filter(Boolean).join(' ');
     return name || '—';
-  }
-
-  private loadCustomers(search?: string): void {
-    this.loading.set(true);
-    this.customerService
-      .getCustomers(10, undefined, search || undefined)
-      .pipe(
-        catchError((err) => {
-          this.error.set(this.extractError(err));
-          this.loading.set(false);
-          return of(null);
-        }),
-        takeUntilDestroyed(this.destroyRef),
-      )
-      .subscribe((res) => {
-        if (res) {
-          this.customers.set(res.content);
-          this.nextPageToken.set(res.next_page_token);
-          this.hasMore.set(!!res.next_page_token);
-        }
-        this.loading.set(false);
-      });
   }
 
   // Guard: skip if already fetching or no more pages.
@@ -188,10 +165,9 @@ export class CustomerListComponent implements OnInit {
     });
   }
 
-  // Sync the URL query string to match the current search state.
+  // Sync the URL query string to match the given search value.
   // Uses replaceUrl to avoid polluting browser history with every keystroke.
-  private updateQueryParam(): void {
-    const search = this.searchTerm();
+  private updateQueryParam(search: string): void {
     this.router.navigate([], {
       relativeTo: this.route,
       queryParams: search ? { search } : {},

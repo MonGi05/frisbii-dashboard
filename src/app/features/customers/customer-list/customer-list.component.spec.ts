@@ -97,27 +97,18 @@ describe('CustomerListComponent', () => {
   });
 
   describe('clearSearch', () => {
-    it('should reset state and reload', () => {
+    it('should reset searchTerm immediately', () => {
       initAndFlush();
       component.searchTerm.set('test');
 
       component.clearSearch();
       expect(component.searchTerm()).toBe('');
-      expect(component.customers()).toEqual([]);
-
-      const req = httpMock.expectOne((r) => r.url.includes('/list/customer'));
-      req.flush({ size: 10, count: 0, content: [] });
     });
   });
 
   describe('search', () => {
-    it('should pass search term to the API', () => {
+    it('should load without search param on init', () => {
       fixture.detectChanges();
-      const initReq = httpMock.expectOne((r) => r.url.includes('/list/customer'));
-      initReq.flush({ size: 10, count: 0, content: [] });
-
-      component.clearSearch();
-
       const req = httpMock.expectOne((r) => r.url.includes('/list/customer'));
       expect(req.request.params.has('handle_contains')).toBeFalse();
       req.flush({ size: 10, count: 0, content: [] });
