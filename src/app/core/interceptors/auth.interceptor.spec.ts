@@ -92,4 +92,50 @@ describe('authInterceptor', () => {
     expect(errorReceived).toBeTrue();
     httpMock.expectNone(`${environment.apiBaseUrl}/customer/nonexistent`);
   });
+
+  it('should retry on 429 with exponential backoff', (done) => {
+    jasmine.clock().install();
+
+    http.get(`${environment.apiBaseUrl}/list/customer`).subscribe({
+      next: (res: any) => {
+        expect(res).toEqual({ ok: true });
+        jasmine.clock().uninstall();
+        done();
+      },
+      error: () => {
+        jasmine.clock().uninstall();
+        done.fail('Expected retry to succeed');
+      },
+    });
+
+    // First request fails with 429
+    const req1 = httpMock.expectOne(`${environment.apiBaseUrl}/list/customer`);
+    req1.flush('Rate limited', { status: 429, statusText: 'Too Many Requests' });
+
+    // Advance past the 1s backoff delay
+    jasmine.clock().tick(1000);
+
+    // Retry #1 succeeds
+    const req2 = httpMock.expectOne(`${environment.apiBaseUrl}/list/customer`);
+    req2.flush({ ok: true });
+  });
+
+  it('should retry on 500 and propagate error after max retries', (done) => {
+    jasmine.clock().install();
+
+    http.get(`${environment.apiBaseUrl}/list/customer`).subscribe({
+      error: (err) => {
+        expect(err.status).toBe(500);
+        jasmine.clock().uninstall();
+        done();
+      },
+    });
+
+    // Initial request + 3 retries = 4 total requests
+    for (let i = 0; i < 4; i++) {
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}/list/customer`);
+      req.flush('Server Error', { status: 500, statusText: 'Internal Server Error' });
+      if (i < 3) jasmine.clock().tick(1000 * Math.pow(2, i)); // 1s, 2s, 4s
+    }
+  });
 });
