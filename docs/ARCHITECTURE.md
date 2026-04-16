@@ -79,7 +79,7 @@ The project follows Angular's recommended **modular architecture** pattern:
 
 - **`core/`** contains singleton services, interceptors, and models that are instantiated once and shared across the entire app. Placing them here prevents accidental re-provision and makes it clear these are application-wide concerns (authentication, API communication, data models).
 
-- **`shared/`** holds reusable, stateless components and pipes (`StateBadge`, `LoadingSpinner`, `ErrorDisplay`, `CurrencyFormatPipe`). These are presentation-only building blocks with no knowledge of business logic — any feature can import and use them. This avoids duplicating UI patterns across features.
+- **`shared/`** holds reusable, stateless components and pipes (`StateBadge`, `LoadingSpinner`, `ErrorDisplay`, `CurrencyFormatPipe`). These are presentation-only building blocks with no knowledge of business logic — any feature can import and use them. This avoids duplicating UI patterns across features. 
 
 - **`features/`** groups components by domain (`customers/`, `not-found/`). Each feature is self-contained and could be lazy-loaded in a larger app. This keeps the codebase navigable as it grows — a developer working on customer views only needs to look inside `features/customers/`.
 
@@ -181,7 +181,7 @@ Each scrollable list places an invisible sentinel `<div>` at the bottom.  An `In
 
 When ≥ 10% of the sentinel enters the viewport, `loadMore()` fires using the `next_page_token` from the previous API response.
 
-**Challenge**: The sentinel `<div>` is wrapped in `@if (hasMore())`, so it gets created/destroyed dynamically.  The customer list component uses an `effect()` to re-attach the observer whenever the element reappears.  The customer detail component uses a `requestAnimationFrame` polling loop as a fallback.
+**Challenge**: The sentinel `<div>` is wrapped in `@if (hasMore())`, so it gets created/destroyed dynamically.  Both the customer list and customer detail components use a constructor `effect()` that watches the sentinel `viewChild` signal and re-attaches the observer whenever the element reappears in the DOM.
 
 ### 5. HTTP Interceptor with Exponential Backoff
 
@@ -257,4 +257,23 @@ Run tests with:
 npm test
 ```
 
-Coverage includes all 4 services (CustomerService, SubscriptionService, InvoiceService, ToastService) and the auth interceptor — 40+ test cases covering happy paths, error codes (401/403/404/500), pagination, and toast lifecycle.
+Coverage includes:
+- **Services** (4 files): CustomerService, SubscriptionService, InvoiceService, ToastService — CRUD operations, pagination, error propagation, toast lifecycle
+- **Auth interceptor** (1 file): header attachment/exclusion, non-retryable error propagation (401/403/404), retry on 429/5xx with exponential backoff
+- **Components** (3 files): CustomerListComponent (loading/error states, pagination, search), CustomerDetailComponent (parallel data loading, helper methods, optimistic pause/unpause with rollback), StateBadgeComponent (state normalization, cross-type validation, CSS class mapping)
+- **Pipes** (1 file): CurrencyFormatPipe (minor-unit conversion, multi-currency, invalid currency fallback)
+
+Total: 77 test cases across 9 spec files.
+
+### E2E Tests
+
+Playwright tests in `e2e/` validate the main user flows: customer list loading, search filtering, and customer detail navigation.
+
+Two Playwright projects are configured in `playwright.config.ts`:
+- **`chromium`** — runs against the live Frisbii API
+- **`chromium-mocked`** — intercepts API calls with fixture data (`e2e/mocks/`) for offline or CI use
+
+```bash
+npm run e2e              # Live API
+npm run e2e:mocked       # Mocked API
+```

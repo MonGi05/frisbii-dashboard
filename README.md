@@ -7,7 +7,7 @@ An Angular v21 subscription management dashboard that integrates with the Frisbi
 ### Prerequisites
 
 - Node.js v20.19+ or v22.12+ or v24+
-- npm or yarn
+- npm (v11+)
 - Chromium or Chrome (for running unit tests)
 
 ### Installation
@@ -19,8 +19,6 @@ cd frisbii-dashboard
 
 # Install dependencies
 npm install
-# or
-yarn install
 ```
 
 ### Configuration
@@ -42,18 +40,22 @@ export const environment = {
 
 > **Important:** `environment.ts` is gitignored — your API key will never be committed. Only the placeholder `environment.example.ts` is tracked in git.
 
+
 ### Running the Application
 
 ```bash
 # Development server
 npm start
-# or
-ng serve
 
 # Run unit tests
 npm test
-# or
-CHROME_BIN=$(which chromium) ng test --no-watch --browsers=ChromeHeadlessNoSandbox
+
+# Build for production
+npm run build
+
+# E2E tests (Playwright)
+npm run e2e              # Live API
+npm run e2e:mocked       # Offline, mocked API data
 ```
 
 The app runs at `http://localhost:4200` by default.
@@ -74,21 +76,21 @@ The app runs at `http://localhost:4200` by default.
 
 ### Bonus
 
-- **Infinite Scrolling** — on all three lists (customers, subscriptions, invoices) using `IntersectionObserver`
+- **Infinite Scrolling** — on all three lists (customers, subscriptions, invoices) using `IntersectionObserver` with signal-based sentinel re-attachment via `effect()`
 - **Optimistic UI** — pause/unpause updates state immediately, reverts on API failure
 - **HTTP Interceptor** — functional interceptor for Basic Auth + retry with exponential backoff (429/5xx)
 - **Toast Notifications** — success/error toasts with auto-dismiss on subscription actions
-- **Unit Tests** — 40 tests across 5 spec files (Karma/Jasmine), covering services and interceptor error cases
+- **Unit Tests** — 77 unit tests across 9 spec files (Karma/Jasmine), covering services, interceptor, components (customer-list, customer-detail, state-badge), and pipes (currency-format)
+- **E2E Tests** — Playwright tests covering customer list, search, and detail navigation, with a mocked-API profile for offline/CI runs
 - **Breadcrumb Navigation** — on customer detail page with link back to list
 - **Prettier** — consistent code formatting across all source files
-- **API Key Security** — `environment.ts` gitignored, `environment.example.ts` committed as template
 - **Tailwind CSS** for utility-first styling
 
 ## Architecture Decisions
 
-See the full [Architecture document](ARCHITECTURE.md).
+See the full [Architecture document](docs/ARCHITECTURE.md).
 
-### Design System
+## Design System
 
 - **Tailwind CSS v4** for utility-first styling — no custom CSS files needed for most components.
 - **Dark sidebar** with light content area creates clear visual hierarchy.
@@ -99,8 +101,7 @@ See the full [Architecture document](ARCHITECTURE.md).
 - `active` → Green
 - `on_hold` → Amber
 - `cancelled` → Red
-- `expired` → Gray
-- Unknown → Gray
+- `expired` / `Unknown` → Gray
 
 **Invoice States:**
 
@@ -108,8 +109,7 @@ See the full [Architecture document](ARCHITECTURE.md).
 - `authorized` → Blue
 - `pending` → Amber
 - `failed` → Red
-- `created` → Gray
-- Unknown → Gray
+- `created` / `Unknown` → Gray
 
 ## Assumptions Made
 
@@ -138,9 +138,17 @@ See the full [Architecture document](ARCHITECTURE.md).
 
 Yes, AI assistance was used during development.
 
-I used two tools:
-- **Claude** to scaffold the Angular project, generate boilerplate for routing, services, components and some styling helpers.
+I used three tools:
+- **Claude Code (Agent Teams)** to scaffold the Angular project, generate boilerplate for routing, services, components and some styling helpers, and to propose a structured plan with distinct roles (Planner, API Implementer, UI Implementer, Tester, Reviewer).
+- **Claude inside Perplexity** to prompt‑engineer Claude Code (for better task prompts, constraints, and review instructions) and to search the web (Angular docs, Stack Overflow, and Frisbii docs) to confirm patterns and fix edge cases.
 - **GitHub Copilot** as a reasoning assistant to discuss architecture, Angular 21 + Signals patterns, Frisbii API integration, and to refine some code snippets and documentation.
+
+In particular, Claude’s agent team drafted the initial planning documents for this project:
+- [**SPEC.md**](docs/SPEC.md) — Functional specification defining scope, features, and requirements
+- [**PLAN.md**](docs/PLAN.md) — Proposed architecture and design plan
+- [**PHASES.md**](docs/PHASES.md) — 5-phase implementation plan with deliverables and defined roles (Planner, API Implementer, UI Implementer, Tester, Reviewer) 
+
+I reviewed these documents, accepted the overall direction, and then implemented the app against them, correcting details where they diverged from the real Frisbii API or from the final code.
 
 Typical prompts included:
 - “Generate an Angular 21 project for a subscription management dashboard using the Frisbii API, with Signals for state management and dedicated services for customers, subscriptions and invoices.”
@@ -148,12 +156,16 @@ Typical prompts included:
 - “Propose a clean folder structure (core / features / shared) and a simple Signals‑based store for a customer list with loading and error states.”
 - “Help draft the README sections explaining architecture decisions and AI usage for this coding challenge.”
 
+For a longer, more complete list of prompts and AI interactions, see [**PROMPTS.md**](docs/PROMPTS.md) in the repository.
+
 **What went well**
 - Fast scaffolding of repetitive boilerplate (project structure, routing setup, service and model skeletons).
 - Helpful suggestions for organizing state with Signals, composing RxJS operators for HTTP requests, and structuring feature modules.
-- Accelerated drafting of documentation (README structure, architecture notes).
+- Accelerated drafting of documentation (README structure, architecture notes and planning docs like SPEC/PLAN/PHASES).
 
 **What did not work perfectly**
-- Some generated code did not match the Frisbii API exactly (endpoints, parameters, response types) and had to be corrected after checking the official documentation.
+- In a few places, Claude suggested non-idiomatic solutions (for example, using extra polling logic where a more reactive approach was possible). I caught these during review and refactored them to match the final architecture.
+- Some generated code and plans did not match the Frisbii API exactly (endpoints, parameters, response types) and had to be corrected after checking the official documentation.
 - A few suggestions were over‑engineered.
-- All AI‑generated snippets were reviewed, adapted and tested manually to ensure they compile, follow Angular 21 conventions, and meet the challenge requirements (no API keys in source control, proper loading/error handling, etc.).
+
+All AI‑generated snippets and documents were reviewed, adapted and tested manually to ensure they compile, follow Angular 21 conventions, and meet the challenge requirements (no API keys in source control, proper loading/error handling, etc.).
